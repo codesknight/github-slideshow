@@ -1,0 +1,1241 @@
+#include<graphics.h>
+#include<conio.h>
+#include<iostream>
+#include "EasyXPng.h"
+#define W 500
+#define H 600
+using namespace std;
+
+//一些全局变量
+MOUSEMSG m;		// 定义鼠标消息
+IMAGE hand;		//鼠标图案
+int k = 0;		//控制一步一棋子//k = 0,a; // k = 1,b;
+int mood = 0;   //mood = 1:单人模式;mood = 2:双人模式；
+int w = 0;//判断胜负
+int c = 0;//计算a下的次数
+int wina = 0;// = 1:a赢了
+int winb = 0; // = 2：b赢了
+int winc = 0; // = 3： 平局
+int v = 0;//堵截成功v = 1
+int n = 0;//b胜利了n = 1
+int g = 0;
+int q = 1;//q = 0，则武器可下
+
+void wordwin();
+void wordawin();
+void wordbwin();
+
+char map[3][4] = {
+	"www",
+	"www",
+	"www",
+};
+
+void draw()//绘制棋局函数 只适用于gamebegin()函数-----------目前适用于检测各种结点
+{
+	cleardevice();
+	initgraph(600, 600);
+	setbkcolor(RGB(250, 250, 250));//蓝红黄
+	cleardevice();
+	setlinecolor(RED);
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (map[i][j] == 'w')
+			{
+				rectangle(j * 200, i * 200, (j + 1) * 200, (i + 1) * 200);
+			}
+		}
+	}
+}
+
+void huizhijiemian()//绘制界面函数，只应用于gamebegin函数内
+{
+	IMAGE hand;
+	loadimage(&hand, "hand.png", 50, 50);
+	BeginBatchDraw();
+	int x1, x2, y1, y2, y3, y4;//用来绘制界面的线框坐标
+	int wid = 50;//线框宽度
+	int len = 200;//线框长度
+	x1 = 200; x2 = x1 + len;
+	y1 = 250; y2 = y1 + wid;
+	y3 = y1 + wid + 50; y4 = y3 + wid;
+	setlinecolor(RED);
+	rectangle(x1, y1, x2, y2);
+	rectangle(x1, y2, x2, y3);
+	rectangle(x1, y3, x2, y4);
+	setbkmode(TRANSPARENT);//显示透明文字
+	settextcolor(RED);
+	settextstyle(70, 0, _T("隶书"));
+	outtextxy(W / 2 - 100, 100, "井 字 棋");
+	settextstyle(30, 0, _T("隶书"));
+	outtextxy(x1 + 30, y1 + 5, "单人模式");
+	settextstyle(30, 0, _T("隶书"));
+	outtextxy(x1 + 30, y2 + 5, "双人模式");
+	settextstyle(30, 0, _T("隶书"));
+	outtextxy(x1 + 30, y3 + 5, "退出游戏");
+	putimagePng(m.x, m.y, &hand);
+	FlushBatchDraw();
+	EndBatchDraw();
+}
+void huizhijiemian_1()//二次绘制界面函数，只应用于gamebegin函数内
+{
+	IMAGE hand;
+	loadimage(&hand, "hand.png", 50, 50);
+	BeginBatchDraw();
+	int x1, x2, y1, y2, y3, y4;//用来绘制界面的线框坐标
+	int wid = 50;//线框宽度
+	int len = 200;//线框长度
+	x1 = 200; x2 = x1 + len;
+	y1 = 250; y2 = y1 + wid;
+	y3 = y1 + wid + 50; y4 = y3 + wid;
+	setlinecolor(YELLOW);
+	rectangle(x1, y1, x2, y2);
+	rectangle(x1, y2, x2, y3);
+	rectangle(x1, y3, x2, y4);
+	setbkmode(TRANSPARENT);//显示透明文字
+	settextcolor(BLUE);
+	settextstyle(50, 0, _T("隶书"));
+	outtextxy(W / 4 - 75, 100, "欢迎来玩井字棋小游戏");
+	outtextxy(W / 2 - 100, 150, "请在次确认模式");
+	settextstyle(30, 0, _T("隶书"));
+	outtextxy(x1 + 30, y1 + 5, "单人模式");
+	settextstyle(30, 0, _T("隶书"));
+	outtextxy(x1 + 30, y2 + 5, "双人模式");
+	settextstyle(30, 0, _T("隶书"));
+	outtextxy(x1 + 30, y3 + 5, "退出游戏");
+	putimagePng(m.x, m.y, &hand);
+	FlushBatchDraw();
+	EndBatchDraw();
+}
+void gamebegin()  	// 游戏开始
+{
+	w = 0;
+	q = 1;
+	k = 0;
+	if (w == 0)
+	{
+		int exit = 0;//循环出口
+		int x1, x2, y1, y2, y3, y4;
+		int wid = 50;//线框宽度
+		int len = 200;//线框长度
+		x1 = 200; x2 = x1 + len;
+		y1 = 250; y2 = y1 + wid;
+		y3 = y1 + wid + 50; y4 = y3 + wid;
+		initgraph(600, 600);
+		setfillcolor(GREEN);//鼠标点击颜色
+		setbkcolor(RGB(250, 250, 250));//蓝红黄
+		cleardevice();
+		while (exit != 1)
+		{
+			huizhijiemian();//绘制界面函数
+			// 获取一条鼠标消息
+			m = GetMouseMsg();
+			putimagePng(m.x, m.y, &hand);
+			cleardevice();
+			switch (m.uMsg)
+			{
+			case WM_MOUSEMOVE:
+				// 鼠标移动的时候画红色的小点
+				putimagePng(m.x, m.y, &hand);
+				break;
+			case WM_LBUTTONDOWN://点击左键
+				if (m.x >= x1 && m.x <= x2 && m.y >= y1 && m.y <= y2)
+				{//单人模式
+					fillcircle(m.x, m.y, 10);
+					Sleep(1);
+					mood = 1;//单人模式
+					exit = 1;//退出循环结束此函数
+					closegraph();
+				}
+				else if (m.x >= x1 && m.x <= x2 && m.y >= y2 && m.y <= y3)
+				{//双人模式
+					fillcircle(m.x, m.y, 10);
+					Sleep(1);
+					mood = 2;//双人模式
+					exit = 1;//退出循环结束此函数
+					closegraph();
+				}
+				else if (m.x >= x1 && m.x <= x2 && m.y >= y3 && m.y <= y4)
+				{
+					fillcircle(m.x, m.y, 10);
+					closegraph();
+					break;
+				}
+				else {
+					int step = 20;
+					setlinestyle(PS_SOLID, 20);//设置线条宽度
+					setlinecolor(RED);
+					line(m.x - step, m.y - step, m.x + step, m.y + step);
+					line(m.x + step, m.y - step, m.x - step, m.y + step);
+					setlinestyle(PS_SOLID, 0);//还原线条宽度
+				}
+				break;
+			case WM_RBUTTONUP:// 按鼠标右键退出程序
+				setlinestyle(PS_SOLID, 20);//设置线条宽度
+				setlinecolor(BLUE);
+				circle(m.x, m.y, 20);
+				setlinestyle(PS_SOLID, 0);//还原线条宽度
+				break;
+			}
+		}
+		draw();//展开新棋局
+	}
+	BeginBatchDraw();//开始第二次批量绘制
+}
+void gamebegin_1()  	// 二次游戏开始界面
+{
+	//所有全局变量全都重新初始化
+	k = 0;		//控制一步一棋子//k = 0,a; // k = 1,b;
+	mood = 0;   //mood = 1:单人模式;mood = 2:双人模式；
+	w = 0;//判断胜负
+	c = 0;//计算a下的次数
+	wina = 0;// = 1:a赢了
+	winb = 0; // = 2：b赢了
+	winc = 0; // = 3： 平局
+	v = 0;//堵截成功v = 1
+	n = 0;//b胜利了n = 1
+	g = 0;
+	q = 1;//q = 0，则武器可下
+
+	if (w == 0)
+	{
+		int exit = 0;//循环出口
+		int x1, x2, y1, y2, y3, y4;
+		int wid = 50;//线框宽度
+		int len = 200;//线框长度
+		x1 = 200; x2 = x1 + len;
+		y1 = 250; y2 = y1 + wid;
+		y3 = y1 + wid + 50; y4 = y3 + wid;
+		initgraph(600, 600);
+		setfillcolor(GREEN);//鼠标点击颜色
+		setbkcolor(RGB(250, 250, 250));//蓝红黄
+		cleardevice();
+		while (exit != 1)
+		{
+			huizhijiemian_1();//二次绘制界面函数
+			// 获取一条鼠标消息
+			m = GetMouseMsg();
+			putimagePng(m.x, m.y, &hand);
+			cleardevice();
+			switch (m.uMsg)
+			{
+			case WM_MOUSEMOVE:
+				// 鼠标移动的时候画红色的小点
+				putimagePng(m.x, m.y, &hand);
+				break;
+			case WM_LBUTTONDOWN://点击左键
+				if (m.x >= x1 && m.x <= x2 && m.y >= y1 && m.y <= y2)
+				{//单人模式
+					fillcircle(m.x, m.y, 10);
+					Sleep(1);
+					mood = 1;//单人模式
+					exit = 1;//退出循环结束此函数
+					closegraph();
+				}
+				else if (m.x >= x1 && m.x <= x2 && m.y >= y2 && m.y <= y3)
+				{//双人模式
+					fillcircle(m.x, m.y, 10);
+					Sleep(1);
+					mood = 2;//双人模式
+					exit = 1;//退出循环结束此函数
+					closegraph();
+				}
+				else if (m.x >= x1 && m.x <= x2 && m.y >= y3 && m.y <= y4)
+				{
+					fillcircle(m.x, m.y, 10);
+					closegraph();
+					break;
+				}
+				else {
+					int step = 20;
+					setlinestyle(PS_SOLID, 20);//设置线条宽度
+					setlinecolor(RED);
+					line(m.x - step, m.y - step, m.x + step, m.y + step);
+					line(m.x + step, m.y - step, m.x - step, m.y + step);
+					setlinestyle(PS_SOLID, 0);//还原线条宽度
+				}
+				break;
+			case WM_RBUTTONUP:// 按鼠标右键退出程序
+				setlinestyle(PS_SOLID, 20);//设置线条宽度
+				setlinecolor(BLUE);
+				circle(m.x, m.y, 20);
+				setlinestyle(PS_SOLID, 0);//还原线条宽度
+				break;
+			}
+		}
+		//重开一局
+		map[0][0] = 'w';
+		map[0][1] = 'w';
+		map[0][2] = 'w';
+		map[1][0] = 'w';
+		map[1][1] = 'w';
+		map[1][2] = 'w';
+		map[2][0] = 'w';
+		map[2][1] = 'w';
+		map[2][2] = 'w';
+		draw();
+	}
+	BeginBatchDraw();//开始第二次批量绘制
+}
+void gameshow()	// 显示
+{
+	cleardevice();
+	setlinecolor(RED);
+	int i, j;
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (map[i][j] == 'w')
+			{
+				rectangle(j * 200, i * 200, (j + 1) * 200, (i + 1) * 200);
+			}
+			if (map[i][j] == 'a')
+			{
+				rectangle(j * 200, i * 200, (j + 1) * 200, (i + 1) * 200);
+				setlinestyle(PS_SOLID, 20);//设置线条宽度
+				setlinecolor(BLUE);
+				circle((j * 200 + (j + 1) * 200) / 2, (i * 200 + (i + 1) * 200) / 2, 50);//在格子中心点画圆
+				setlinestyle(PS_SOLID, 0);//还原线条宽度
+			}
+			if (map[i][j] == 'b')
+			{
+				rectangle(j * 200, i * 200, (j + 1) * 200, (i + 1) * 200);
+				setlinestyle(PS_SOLID, 20);//设置线条宽度
+				setlinecolor(RED);
+				line((j * 200 + (j + 1) * 200) / 2 - 50, (i * 200 + (i + 1) * 200) / 2 - 50, (j * 200 + (j + 1) * 200) / 2 + 50, (i * 200 + (i + 1) * 200) / 2 + 50);
+				line((j * 200 + (j + 1) * 200) / 2 + 50, (i * 200 + (i + 1) * 200) / 2 - 50, (j * 200 + (j + 1) * 200) / 2 - 50, (i * 200 + (i + 1) * 200) / 2 + 50);
+				setlinestyle(PS_SOLID, 0);//还原线条宽度
+			}
+			if (map[0][0] != 'w' && map[0][1] != 'w' && map[0][2] != 'w' &&
+				map[1][0] != 'w' && map[1][1] != 'w' && map[1][2] != 'w' &&
+				map[2][0] != 'w' && map[2][1] != 'w' && map[2][2] != 'w')
+			{
+				q = 0;
+			}
+		}
+	}
+	FlushBatchDraw();
+}
+
+void updatenotautomation_1()		// 单人模式下的手动的更新
+{
+	int exit = 0;
+	cleardevice();
+	while (exit != 1)
+	{
+		// 获取一条鼠标消息
+		m = GetMouseMsg();
+		cleardevice();
+		switch (m.uMsg)
+		{
+		case WM_LBUTTONDOWN://点击左键下棋将w变成a
+			if (k == 0)//k = 0，轮到a下
+			{
+				if (m.y < 200 && m.y>0)//在第一排
+				{
+					if (m.x > 0 && m.x < 200 && map[0][0] == 'w')//在第1个格子
+					{
+						map[0][0] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[0][1] == 'w')//在第2个格子
+					{
+						map[0][1] = 'a';
+						if (c == 2)
+							g = 1;
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[0][2] == 'w')//在第3个格子
+					{
+						map[0][2] = 'a';
+						exit = 1;//退出循环
+					}
+				}
+				else if (m.y < 400 && m.y>200)//在第一排
+				{
+					if (m.x > 0 && m.x < 200 && map[1][0] == 'w')//在第4个格子
+					{
+						map[1][0] = 'a';
+						if (c == 2)
+							g = 1;
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[1][1] == 'w')//在第5个格子
+					{
+						map[1][1] = 'a';
+						if (c == 2)
+							g = 1;
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[1][2] == 'w')//在第6个格子
+					{
+						map[1][2] = 'a';
+						exit = 1;//退出循环
+					}
+				}
+				else if (m.y < 600 && m.y>400)//在第3排
+				{
+					if (m.x > 0 && m.x < 200 && map[2][0] == 'w')//在第7个格子
+					{
+						map[2][0] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[2][1] == 'w')//在第8个格子
+					{
+						map[2][1] = 'a';
+						if (c == 2)
+							g = 1;
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[2][2] == 'w')//在第9个格子
+					{
+						map[2][2] = 'a';
+						exit = 1;//退出循环
+					}
+				}
+				k = 1;//令k = 1，轮到b下。
+				c++;//a下一次count++
+			}
+		}
+	}
+	k = 1;//方便重复玩
+}
+void AIbuding(int r)//随机情况
+{
+	if (r == 1 && map[0][0] == 'w') {
+		map[0][0] = 'b';
+	}
+	else if (r == 2 && map[0][1] == 'w') {
+		map[0][1] = 'b';
+	}
+	else if (r == 3 && map[0][2] == 'w') {
+		map[0][2] = 'b';
+	}
+	else if (r == 4 && map[1][0] == 'w') {
+		map[1][0] = 'b';
+	}
+	else if (r == 5 && map[1][1] == 'w') {
+		map[1][1] = 'b';
+	}
+	else if (r == 6 && map[1][2] == 'w') {
+		map[1][2] = 'b';
+	}
+	else if (r == 7 && map[2][0] == 'w') {
+		map[2][0] = 'b';
+	}
+	else if (r == 8 && map[2][1] == 'w') {
+		map[2][1] = 'b';
+	}
+	else if (r == 9 && map[2][2] == 'w') {
+		map[2][2] = 'b';
+	}
+}
+void AIbuding_2()//所有围堵情况
+{
+	if (map[0][0] == 'w' && map[0][1] == 'a' && map[0][2] == 'a' ||
+		map[0][0] == 'w' && map[1][1] == 'a' && map[2][2] == 'a' ||
+		map[0][0] == 'w' && map[1][0] == 'a' && map[2][0] == 'a')
+	{
+		map[0][0] = 'b';
+		v = 1;
+	}
+	else if (map[0][1] == 'w' && map[0][0] == 'a' && map[0][2] == 'a' ||
+		map[0][1] == 'w' && map[1][1] == 'a' && map[2][1] == 'a')
+	{
+		map[0][1] = 'b';
+		v = 1;
+	}
+	else if (map[0][2] == 'w' && map[0][0] == 'a' && map[0][1] == 'a' ||
+		map[0][2] == 'w' && map[1][1] == 'a' && map[2][0] == 'a' ||
+		map[0][2] == 'w' && map[1][2] == 'a' && map[2][2] == 'a')
+	{
+		map[0][2] = 'b';
+		v = 1;
+	}
+	else if (map[1][0] == 'w' && map[0][0] == 'a' && map[2][0] == 'a' ||
+		map[1][0] == 'w' && map[1][1] == 'a' && map[1][2] == 'a')
+	{
+		map[1][0] = 'b';
+		v = 1;
+	}
+	else if (map[1][1] == 'w' && map[1][0] == 'a' && map[1][2] == 'a' ||
+		map[1][1] == 'w' && map[0][1] == 'a' && map[2][1] == 'a' ||
+		map[1][1] == 'w' && map[0][0] == 'a' && map[2][2] == 'a' ||
+		map[1][1] == 'w' && map[0][2] == 'a' && map[2][0] == 'a')
+	{
+		map[1][1] = 'b';
+		v = 1;
+	}
+	else if (map[1][2] == 'w' && map[0][2] == 'a' && map[2][2] == 'a' ||
+		map[1][2] == 'w' && map[1][0] == 'a' && map[1][1] == 'a')
+	{
+		map[1][2] = 'b';
+		v = 1;
+	}
+	else if (map[2][0] == 'w' && map[0][0] == 'a' && map[1][0] == 'a' ||
+		map[2][0] == 'w' && map[1][1] == 'a' && map[0][2] == 'a' ||
+		map[2][0] == 'w' && map[2][1] == 'a' && map[2][2] == 'a')
+	{
+		map[2][0] = 'b';
+		v = 1;
+	}
+	else if (map[2][1] == 'w' && map[2][0] == 'a' && map[2][2] == 'a' ||
+		map[2][1] == 'w' && map[1][1] == 'a' && map[0][1] == 'a')
+	{
+		map[2][1] = 'b';
+		v = 1;
+	}
+	else if (map[2][2] == 'w' && map[2][0] == 'a' && map[2][1] == 'a' ||
+		map[2][2] == 'w' && map[0][2] == 'a' && map[1][2] == 'a' ||
+		map[2][2] == 'w' && map[0][0] == 'a' && map[1][1] == 'a')
+	{
+		map[2][2] = 'b';
+		v = 1;
+	}
+}
+void AIbuding_3()//必胜
+{
+	if (map[0][0] == 'w' && map[0][1] == 'b' && map[0][2] == 'b' ||
+		map[0][0] == 'w' && map[1][1] == 'b' && map[2][2] == 'b' ||
+		map[0][0] == 'w' && map[1][0] == 'b' && map[2][0] == 'b')
+	{
+		map[0][0] = 'b';
+		n = 1;
+	}
+	else if (map[0][1] == 'w' && map[0][0] == 'b' && map[0][2] == 'b' ||
+		map[0][1] == 'w' && map[1][1] == 'b' && map[2][1] == 'b')
+	{
+		map[0][1] = 'b';
+		n = 1;
+	}
+	else if (map[0][2] == 'w' && map[0][0] == 'b' && map[0][1] == 'b' ||
+		map[0][2] == 'w' && map[1][1] == 'b' && map[2][0] == 'b' ||
+		map[0][2] == 'w' && map[1][2] == 'b' && map[2][2] == 'b')
+	{
+		map[0][2] = 'b';
+		n = 1;
+	}
+	else if (map[1][0] == 'w' && map[0][0] == 'b' && map[2][0] == 'b' ||
+		map[1][0] == 'w' && map[1][1] == 'b' && map[1][2] == 'b')
+	{
+		map[1][0] = 'b';
+		n = 1;
+	}
+	else if (map[1][1] == 'w' && map[1][0] == 'b' && map[1][2] == 'b' ||
+		map[1][1] == 'w' && map[0][1] == 'b' && map[2][1] == 'b' ||
+		map[1][1] == 'w' && map[0][0] == 'b' && map[2][2] == 'b' ||
+		map[1][1] == 'w' && map[0][2] == 'b' && map[2][0] == 'b')
+	{
+		map[1][1] = 'b';
+		n = 1;
+	}
+	else if (map[1][2] == 'w' && map[0][2] == 'b' && map[2][2] == 'b' ||
+		map[1][2] == 'w' && map[1][0] == 'b' && map[1][1] == 'b')
+	{
+		map[1][2] = 'b';
+		n = 1;
+	}
+	else if (map[2][0] == 'w' && map[0][0] == 'b' && map[1][0] == 'b' ||
+		map[2][0] == 'w' && map[1][1] == 'b' && map[0][2] == 'b' ||
+		map[2][0] == 'w' && map[2][1] == 'b' && map[2][2] == 'b')
+	{
+		map[2][0] = 'b';
+		n = 1;
+	}
+	else if (map[2][1] == 'w' && map[2][0] == 'b' && map[2][2] == 'b' ||
+		map[2][1] == 'w' && map[1][1] == 'b' && map[0][1] == 'b')
+	{
+		map[2][1] = 'b';
+		n = 1;
+	}
+	else if (map[2][2] == 'w' && map[2][0] == 'b' && map[2][1] == 'b' ||
+		map[2][2] == 'w' && map[0][2] == 'b' && map[1][2] == 'b' ||
+		map[2][2] == 'w' && map[0][0] == 'b' && map[1][1] == 'b')
+	{
+		map[2][2] = 'b';
+		n = 1;
+	}
+}
+void jiexue()//解穴函数--疗伤函数
+{
+	if (map[0][0] == 'w') {
+		map[0][0] = 'b';
+	}
+	else if (map[0][1] == 'w') {
+		map[0][1] = 'b';
+	}
+	else if (map[0][2] == 'w') {
+		map[0][2] = 'b';
+	}
+	else if (map[1][0] == 'w') {
+		map[1][0] = 'b';
+	}
+	else if (map[1][1] == 'w') {
+		map[1][1] = 'b';
+	}
+	else if (map[1][2] == 'w') {
+		map[1][2] = 'b';
+	}
+	else if (map[2][0] == 'w') {
+		map[2][0] = 'b';
+	}
+	else if (map[2][1] == 'w') {
+		map[2][1] = 'b';
+	}
+	else if (map[2][2] == 'w') {
+		map[2][2] = 'b';
+	}
+}
+
+void Artificial_Intelligence()			//人工智能函数——让ai与自己对弈，实现b堵截功能
+{
+	int r = rand() % 9 + 1;//生成1~9的随机数
+	if (k == 1)//轮到AI下棋了
+	{
+		if (c == 1)//第一轮：随机
+		{
+			if (map[1][2] == 'a')
+			{
+				AIbuding(5);
+			}
+			else if (map[0][1] == 'a')
+			{
+				AIbuding(5);
+			}
+			else if (map[1][0] == 'a')
+			{
+				AIbuding(5);
+			}
+			else if (map[2][1] == 'a')
+			{
+				AIbuding(5);
+			}
+			else if (map[1][1] == 'a')//破解三角阵
+			{
+				map[0][0] = 'b';//map[0][2] = 'b'    map[2][0] = 'b'      map[2][2] = 'b'
+			}
+			else if (map[0][0] == 'a')//破解三角阵
+			{
+				map[1][1] = 'b';//以点破面
+			}
+			else if (map[0][2] == 'a')//破解三角阵
+			{
+				map[1][1] = 'b';//以点破面
+			}
+			else if (map[2][0] == 'a')//破解三角阵
+			{
+				map[1][1] = 'b';//以点破面
+			}
+			else if (map[2][2] == 'a')//破解三角阵
+			{
+				map[1][1] = 'b';//以点破面
+			}
+		}
+		else if (c == 2)//第二轮：要么堵，要么随机
+		{
+			if (map[1][0] == 'a' && map[0][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(1);//1 3 7 9  6
+			}
+			else if (map[1][0] == 'a' && map[2][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(7);//1 3 7 9  6
+			}
+			else if (map[1][2] == 'a' && map[2][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(9);//1 3 7 9  4
+			}
+			else if (map[1][2] == 'a' && map[0][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(3);//1 3 7 9  6
+			}
+			else if (map[2][0] == 'a' && map[0][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(1);//
+			}
+			else if (map[2][1] == 'a' && map[0][0] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(3);//
+			}
+			else if (map[2][2] == 'a' && map[0][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(3);//
+			}
+			else if (map[0][2] == 'a' && map[2][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(1);//
+			}
+			else if (map[0][0] == 'a' && map[1][2] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(7);//
+			}
+			else if (map[0][2] == 'a' && map[1][0] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(9);//
+			}
+			else if (map[2][0] == 'a' && map[1][2] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(1);//
+			}
+			else if (map[2][2] == 'a' && map[1][0] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(3);//
+			}
+			//包夹
+			else if (map[2][2] == 'a' && map[0][0] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(6);//
+			}
+			else if (map[2][0] == 'a' && map[0][2] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(4);//
+			}
+			else if (map[1][0] == 'a' && map[1][2] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(1);//
+			}
+			else if (map[2][1] == 'a' && map[0][1] == 'a' && map[1][1] == 'b')
+			{
+				AIbuding(3);//
+			}
+			else if (map[2][2] == 'a' && map[1][1] == 'a' && map[0][0] == 'b')
+			{
+				AIbuding(3);//
+			}
+			else if (v == 0)
+			{
+				AIbuding_2();
+			}
+		}
+		else if (c == 3)//第三轮：要么堵，要么随机
+		{
+			int q = 1;
+			if (map[1][0] == 'a' && map[0][1] == 'a' && map[1][1] == 'a' && map[1][2] == 'b' && map[2][1] == 'b')//双毒性
+			{
+				AIbuding(9);
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[0][1] == 'a' && map[1][1] == 'a' && map[1][2] == 'b' && map[0][0] == 'b')//双毒性
+			{
+				AIbuding(8);
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[0][1] == 'a' && map[1][1] == 'a' && map[2][1] == 'b' && map[0][0] == 'b')//双毒性
+			{
+				AIbuding(6);
+				q = 0;
+			}
+			//
+			else if (map[1][0] == 'a' && map[2][1] == 'a' && map[1][1] == 'a' && map[1][2] == 'b' && map[0][1] == 'b')//双毒性
+			{
+				AIbuding(3);
+				q = 0;
+			}
+			//
+			else if (map[1][0] == 'a' && map[2][1] == 'a' && map[0][1] == 'a' && map[1][2] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(3);
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[2][1] == 'a' && map[0][1] == 'a' && map[0][2] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(9);
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[2][1] == 'a' && map[0][1] == 'a' && map[0][0] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(9);
+				q = 0;
+			}
+			//
+			else if (map[1][0] == 'a' && map[1][2] == 'a' && map[0][1] == 'a' && map[0][2] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(1);
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[1][2] == 'a' && map[0][1] == 'a' && map[2][0] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(1);
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[1][2] == 'a' && map[0][1] == 'a' && map[0][0] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(3);
+				q = 0;
+			}
+			//
+			else if (map[2][1] == 'a' && map[1][2] == 'a' && map[0][1] == 'a' && map[2][0] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(1);
+				q = 0;
+			}
+			else if (map[2][1] == 'a' && map[1][2] == 'a' && map[0][1] == 'a' && map[0][2] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(9);
+			}
+			else if (map[2][1] == 'a' && map[1][2] == 'a' && map[0][1] == 'a' && map[0][0] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(3);
+				q = 0;
+			}
+			//
+			else if (map[2][1] == 'a' && map[1][0] == 'a' && map[1][2] == 'a' && map[0][0] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(3);
+				q = 0;
+			}
+			else if (map[2][1] == 'a' && map[1][0] == 'a' && map[1][2] == 'a' && map[0][0] == 'b' && map[1][1] == 'b')//双毒性
+			{
+				AIbuding(3);
+				q = 0;
+			}
+			//
+			else if (map[2][1] == 'a' && map[1][0] == 'a' && map[0][2] == 'a' && map[2][0] == 'b' && map[1][1] == 'b')
+			{
+				AIbuding(9);
+				q = 0;
+			}
+			else if (map[2][2] == 'a' && map[1][0] == 'a' && map[0][1] == 'a' && map[0][0] == 'b' && map[1][1] == 'b')
+			{
+				AIbuding(7);
+				q = 0;
+			}
+			else if (map[2][1] == 'a' && map[0][0] == 'a' && map[1][2] == 'a' && map[2][2] == 'b' && map[1][1] == 'b')
+			{
+				AIbuding(7);
+				q = 0;
+			}
+			else if (map[0][1] == 'a' && map[1][2] == 'a' && map[2][0] == 'a' && map[0][2] == 'b' && map[1][1] == 'b')
+			{
+				AIbuding(9);
+				q = 0;
+			}
+			else if (map[2][0] == 'a' && map[1][2] == 'a' && map[0][0] == 'a' && map[1][0] == 'b' && map[1][1] == 'b')//大三角
+			{
+				AIbuding(2);//8 3 9
+				q = 0;
+			}
+			else if (map[2][1] == 'a' && map[0][2] == 'a' && map[0][0] == 'a' && map[1][1] == 'b' && map[0][1] == 'b')//大三角
+			{
+				AIbuding(4);//4 6 7 9
+				q = 0;
+			}
+			else if (map[2][2] == 'a' && map[0][2] == 'a' && map[1][0] == 'a' && map[1][1] == 'b' && map[1][2] == 'b')//大三角
+			{
+				AIbuding(2);//1 2 7 8
+				q = 0;
+			}
+			else if (map[2][0] == 'a' && map[0][1] == 'a' && map[2][2] == 'a' && map[1][1] == 'b' && map[2][1] == 'b')//大三角
+			{
+				AIbuding(1);//1   3    4   6
+				q = 0;
+			}
+			//
+			else if (map[0][1] == 'a' && map[1][1] == 'a' && map[2][0] == 'a' && map[0][0] == 'b' && map[0][2] == 'b')//插缝
+			{
+				AIbuding(8);
+				q = 0;
+			}
+			else if (map[0][1] == 'a' && map[1][1] == 'a' && map[2][2] == 'a' && map[0][0] == 'b' && map[0][2] == 'b')//插缝
+			{
+				AIbuding(8);
+				q = 0;
+			}
+			else if (q == 1)
+			{
+				AIbuding_3();
+			}
+			if (n == 0)
+			{
+				AIbuding_2();
+			}
+		}
+		else if (c == 4)//第4轮：//赢，堵，随机
+		{
+			int q = 1;
+			if (map[1][0] == 'a' && map[0][1] == 'a' && map[1][1] == 'a' && map[2][2] == 'a' && map[1][2] == 'b' && map[2][1] == 'b' && map[0][0] == 'b')//三毒性
+			{
+				AIbuding(3);//7
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[2][1] == 'a' && map[1][1] == 'a' && map[0][2] == 'a' && map[1][2] == 'b' && map[2][0] == 'b' && map[0][1] == 'b')//三毒性
+			{
+				AIbuding(0);//9
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[2][1] == 'a' && map[1][1] == 'a' && map[0][2] == 'a' && map[1][2] == 'b' && map[2][0] == 'b' && map[0][1] == 'b')//三毒性
+			{
+				AIbuding(0);//9
+				q = 0;
+			}
+			else if (map[1][0] == 'a' && map[2][2] == 'a' && map[1][1] == 'a' && map[0][2] == 'a' && map[1][2] == 'b' && map[2][0] == 'b' && map[0][0] == 'b')//三毒性
+			{
+				AIbuding(2);//8
+				q = 0;
+			}
+			else if (map[2][0] == 'a' && map[2][2] == 'a' && map[1][1] == 'a' && map[0][1] == 'a' && map[0][2] == 'b' && map[2][1] == 'b' && map[0][0] == 'b')//三毒性
+			{
+				AIbuding(4);//6
+				q = 0;
+			}
+			else if (map[2][1] == 'a' && map[2][2] == 'a' && map[1][0] == 'a' && map[1][2] == 'a' && map[0][1] == 'b' && map[1][1] == 'b' && map[1][2] == 'b')//三毒性
+			{
+				AIbuding(7);//6
+				q = 0;
+			}
+			else if (q == 1)
+			{
+				AIbuding_3();
+			}
+			if (n == 0)
+			{
+				AIbuding_2();
+			}
+		}
+		k = 0;//b下完让k等于0，a才能继续下
+	}
+}
+
+void updatenotautomation_2()	    // 双人模式下的手动的更新
+{
+	int exit = 0;
+	cleardevice();
+	while (exit != 1)
+	{
+		// 获取一条鼠标消息
+		m = GetMouseMsg();
+		cleardevice();
+		switch (m.uMsg)
+		{
+		case WM_LBUTTONDOWN://点击左键下棋将w变成a
+			if (k == 0)//k = 0，轮到a下
+			{
+				if (m.y < 200 && m.y>0)//在第一排
+				{
+					if (m.x > 0 && m.x < 200 && map[0][0] == 'w')//在第1个格子
+					{
+						map[0][0] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[0][1] == 'w')//在第2个格子
+					{
+						map[0][1] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[0][2] == 'w')//在第3个格子
+					{
+						map[0][2] = 'a';
+						exit = 1;//退出循环
+					}
+				}
+				else if (m.y < 400 && m.y>200)//在第2排
+				{
+					if (m.x > 0 && m.x < 200 && map[1][0] == 'w')//在第4个格子
+					{
+						map[1][0] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[1][1] == 'w')//在第5个格子
+					{
+						map[1][1] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[1][2] == 'w')//在第6个格子
+					{
+						map[1][2] = 'a';
+						exit = 1;//退出循环
+					}
+				}
+				else if (m.y < 600 && m.y>400)//在第3排
+				{
+					if (m.x > 0 && m.x < 200 && map[2][0] == 'w')//在第7个格子
+					{
+						map[2][0] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[2][1] == 'w')//在第8个格子
+					{
+						map[2][1] = 'a';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[2][2] == 'w')//在第9个格子
+					{
+						map[2][2] = 'a';
+						exit = 1;//退出循环
+					}
+				}
+				k = 1;//令k = 1，轮到b下。
+			}
+			else if (k == 1)//k = 0，轮到 b 下
+			{
+				if (m.y < 200 && m.y > 0)//在第1排
+				{
+					if (m.x > 0 && m.x < 200 && map[0][0] == 'w')//在第1个格子
+					{
+						map[0][0] = 'b';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[0][1] == 'w')//在第2个格子
+					{
+						map[0][1] = 'b';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[0][2] == 'w')//在第3个格子
+					{
+						map[0][2] = 'b';
+						exit = 1;//退出循环
+					}
+				}
+				else if (m.y < 400 && m.y > 200)//在第2排
+				{
+					if (m.x > 0 && m.x < 200 && map[1][0] == 'w')//在第4个格子
+					{
+						map[1][0] = 'b';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[1][1] == 'w')//在第5个格子
+					{
+						map[1][1] = 'b';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[1][2] == 'w')//在第6个格子
+					{
+						map[1][2] = 'b';
+						exit = 1;//退出循环
+					}
+				}
+				else if (m.y < 600 && m.y>400)//在第3排
+				{
+					if (m.x > 0 && m.x < 200 && map[2][0] == 'w')//在第7个格子
+					{
+						map[2][0] = 'b';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 200 && m.x < 400 && map[2][1] == 'w')//在第8个格子
+					{
+						map[2][1] = 'b';
+						exit = 1;//退出循环
+					}
+					else if (m.x > 400 && m.x < 600 && map[2][2] == 'w')//在第9个格子
+					{
+						map[2][2] = 'b';
+						exit = 1;//退出循环
+					}
+				}
+				k = 0;
+			}
+			break;
+		case WM_RBUTTONUP:// 按鼠标右键撤回将a变成w
+			break;
+		}
+	}
+}
+void wordawin()//显示a赢文字存放于判断胜负函数
+{
+	setbkmode(TRANSPARENT);//显示透明文字
+	settextcolor(BLUE);//设置字体颜色
+	settextstyle(80, 0, _T("宋体"));
+	outtextxy(80, 200, _T("蓝棋胜利"));
+	w = 1;
+	FlushBatchDraw();
+}
+void wordbwin()//显示b赢文字存放于判断胜负函数
+{
+	setbkmode(TRANSPARENT);//显示透明文字
+	settextcolor(RED);//设置字体颜色
+	settextstyle(80, 0, _T("宋体"));
+	outtextxy(80, 200, _T("红棋胜利"));
+	w = 1;
+	FlushBatchDraw();
+}
+void wordwin()//显示
+{
+	setbkmode(TRANSPARENT);//显示透明文字
+	settextcolor(GREEN);//设置字体颜色
+	settextstyle(80, 0, _T("宋体"));
+	outtextxy(80, 200, _T("平局"));
+	FlushBatchDraw();
+	Sleep(2000);
+}
+void panduanshengfu_a()//判断a的胜负函数存放于自动更新函数内
+{
+	if (map[0][0] == 'a' && map[0][1] == 'a' && map[0][2] == 'a')//1排a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+	else if (map[1][0] == 'a' && map[1][1] == 'a' && map[1][2] == 'a')//2排a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+	else if (map[2][0] == 'a' && map[2][1] == 'a' && map[2][2] == 'a')//3排a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+	else if (map[0][0] == 'a' && map[1][0] == 'a' && map[2][0] == 'a')//1列a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+	else if (map[0][1] == 'a' && map[1][1] == 'a' && map[2][1] == 'a')//2列a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+	else if (map[0][2] == 'a' && map[1][2] == 'a' && map[2][2] == 'a')//3列a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+	else if (map[0][0] == 'a' && map[1][1] == 'a' && map[2][2] == 'a')//左斜a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+	else if (map[0][2] == 'a' && map[1][1] == 'a' && map[2][0] == 'a')//右斜a胜
+	{
+		wina = 1;
+		wordawin();
+		w = 1;
+	}
+}
+void panduanshengfu_b()//判断b的胜负函数存放于自动更新函数内
+{
+	if (map[0][0] == 'b' && map[0][1] == 'b' && map[0][2] == 'b')//1排b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+	else if (map[1][0] == 'b' && map[1][1] == 'b' && map[1][2] == 'b')//2排b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+	else if (map[2][0] == 'b' && map[2][1] == 'b' && map[2][2] == 'b')//3排b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+	else if (map[0][0] == 'b' && map[1][0] == 'b' && map[2][0] == 'b')//1列b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+	else if (map[0][1] == 'b' && map[1][1] == 'b' && map[2][1] == 'b')//2列b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+	else if (map[0][2] == 'b' && map[1][2] == 'b' && map[2][2] == 'b')//3列b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+	else if (map[0][0] == 'b' && map[1][1] == 'b' && map[2][2] == 'b')//左斜b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+	else if (map[0][2] == 'b' && map[1][1] == 'b' && map[2][0] == 'b')//右斜b胜
+	{
+		winb = 1;
+		wordbwin();
+		w = 1;
+	}
+}
+void updateautomation()	 // 自动更新
+{
+	panduanshengfu_a();//判断a赢的所有可能性
+	panduanshengfu_b();//判断b赢的所有可能性
+}
+void gameover()		//游戏结束
+{
+	closegraph();
+}
+int main() // 主函数
+{
+	gamebegin();  	// 初始化
+	if (mood == 1)//单人模式+++++++
+	{
+		while (true)       // 一直循环
+		{
+			gamebegin_1();  	// 二次初始化
+			if (mood == 1)
+			{
+				while (1)
+				{
+					updateautomation(); // 与输入无关的更新(单双人都可目前的功能只负责判断胜负)
+					if (w == 1) { Sleep(2000); break; }
+					gameshow();  // 显示(单双人都可)
+					if (q == 0) { wordwin(); break; }
+					updatenotautomation_1();    // 与输入有关的更新_1代表单人模式
+					Artificial_Intelligence();//人工智能函数——让ai与自己对弈，实现b堵截功能
+				}
+			}
+			if (mood == 2)
+			{
+				while (1)
+				{
+					updateautomation(); // 与输入无关的更新(单双人都可目前的功能只负责判断胜负)
+					if (w == 1) { Sleep(2000); break; }
+					gameshow();  // 显示(单双人都可)
+					if (q == 0) { Sleep(1000); break; }
+					updatenotautomation_2();    // 与输入有关的更新_2代表双人
+				}
+
+			}
+		}
+	}
+	else if (mood == 2)//双人模式++++++++
+	{
+		while (true)       // 一直循环
+		{
+			gamebegin_1();  	// 二次初始化
+			if (mood == 2)
+			{
+				while (1)
+				{
+					updateautomation(); // 与输入无关的更新(单双人都可目前的功能只负责判断胜负)
+					if (w == 1) { Sleep(2000); break; }
+					gameshow();  // 显示(单双人都可)
+					if (q == 0) { Sleep(1000); break; }
+					updatenotautomation_2();    // 与输入有关的更新_2代表双人
+				}
+
+			}
+			if (mood == 1)
+			{
+				while (1)
+				{
+					updateautomation(); // 与输入无关的更新(单双人都可目前的功能只负责判断胜负)
+					if (w == 1) { Sleep(2000); break; }
+					gameshow();  // 显示(单双人都可)
+					if (q == 0) { wordwin(); break; }
+					updatenotautomation_1();    // 与输入有关的更新_1代表单人模式
+					Artificial_Intelligence();//人工智能函数——让ai与自己对弈，实现b堵截功能
+				}
+			}
+		}
+	}
+	gameover();
+	return 0;
+}
